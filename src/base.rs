@@ -8,17 +8,26 @@
 // except according to those terms.
 
 use objc::runtime;
+
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::mem;
 
 pub use objc::runtime::{BOOL, NO, YES};
 
 pub type Class = *mut runtime::Class;
-#[allow(non_camel_case_types)]
-pub type id = *mut runtime::Object;
 pub type SEL = runtime::Sel;
 
+#[allow(non_camel_case_types)]
+pub struct id<T=()>(pub *mut runtime::Object, pub PhantomData<T>);
+
+impl<T, R> Deref for id<(T, R)> {
+    type Target = id<R>;
+    fn deref(&self) -> &id<R> { unsafe { mem::transmute(self) } }
+}
+
 #[allow(non_upper_case_globals)]
-pub const nil: id = 0 as id;
+pub const nil: id = id(0 as *mut runtime::Object, PhantomData);
 #[allow(non_upper_case_globals)]
 pub const Nil: Class = 0 as Class;
 
@@ -36,14 +45,3 @@ pub fn selector(name: &str) -> SEL {
     runtime::Sel::register(name)
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    pub fn test_nsapp() {
-        unsafe {
-            let _nsApp: id = msg_send![class("NSApplication"), sharedApplication];
-        }
-    }
-}

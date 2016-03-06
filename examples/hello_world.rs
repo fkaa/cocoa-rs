@@ -1,57 +1,68 @@
+#[macro_use(autorelease)]
 extern crate cocoa;
 
 use cocoa::base::{selector, nil, NO};
 use cocoa::foundation::{NSUInteger, NSRect, NSPoint, NSSize,
 						NSAutoreleasePool, NSProcessInfo, NSString};
-use cocoa::appkit::{NSApp,
-					NSApplication, NSApplicationActivationPolicyRegular,
+use cocoa::appkit::{NSApplication, NSApplicationActivationPolicyRegular,
 					NSWindow, NSTitledWindowMask, NSBackingStoreBuffered,
 					NSMenu, NSMenuItem, NSRunningApplication,
 					NSApplicationActivateIgnoringOtherApps};
 
+use std::ffi::CString;
+
 fn main() {
 	unsafe {
-		let _pool = NSAutoreleasePool::new(nil);
+        autorelease! {
+            let app = NSApplication::sharedApplication();
+            app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
 
-		let app = NSApp();
-		app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+            let menubar = NSMenu::new();
+            let menuitem = {
+                let item = NSMenuItem::new();
 
-		// create Menu Bar
-		let menubar = NSMenu::new(nil).autorelease();
-		let app_menu_item = NSMenuItem::new(nil).autorelease();
-		menubar.addItem_(app_menu_item);
-		app.setMainMenu_(menubar);
+                let appmenu = {
+                    let menu = NSMenu::new();
 
-		// create Application menu
-		let app_menu = NSMenu::new(nil).autorelease();
-		let quit_prefix = NSString::alloc(nil).init_str("Quit");
-		let quit_title = quit_prefix.stringByAppendingString_(
-			NSProcessInfo::processInfo(nil).processName()
-		);
-		let quit_action = selector("terminate:");
-		let quit_key = NSString::alloc(nil).init_str("q");
-		let quit_item = NSMenuItem::alloc(nil).initWithTitle_action_keyEquivalent_(
-			quit_title,
-			quit_action,
-			quit_key
-		).autorelease();
-		app_menu.addItem_(quit_item);
-		app_menu_item.setSubmenu_(app_menu);
+                    let quit_prefix = NSString::alloc().initWithUTF8String(CString::new("Quit ").unwrap().as_ptr());
+                    let quit_title = quit_prefix.stringByAppendingString_(NSProcessInfo::processInfo().processName());
+                    let quit_action = selector("terminate:");
+                    let quit_key = NSString::alloc().initWithUTF8String(CString::new("q").unwrap().as_ptr());
 
-		// create Window
-		let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
-			NSRect::new(NSPoint::new(0., 0.), NSSize::new(200., 200.)),
-			NSTitledWindowMask as NSUInteger,
-			NSBackingStoreBuffered,
-			NO
-		).autorelease();
-		window.cascadeTopLeftFromPoint_(NSPoint::new(20., 20.));
-		window.center();
-		let title = NSString::alloc(nil).init_str("Hello World!");
-		window.setTitle_(title);
-		window.makeKeyAndOrderFront_(nil);
-		let current_app = NSRunningApplication::currentApplication(nil);
-		current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
-		app.run();
+                    let quit_item = NSMenuItem::alloc().initWithTitle_action_keyEquivalent_(
+                        quit_title,
+                        quit_action,
+                        quit_key
+                    );
+
+                    menu.addItem_(quit_item);
+                    menu
+                };
+
+                item.setSubmenu_(appmenu);
+                item
+            };
+
+            menubar.addItem_(menuitem);
+            app.setMainMenu_(menubar);
+
+            let window = NSWindow::alloc().initWithContentRect_styleMask_backing_defer_(
+                NSRect::new(NSPoint::new(0., 0.), NSSize::new(200., 200.)),
+                NSTitledWindowMask as NSUInteger,
+                NSBackingStoreBuffered,
+                NO
+            );
+            window.cascadeTopLeftFromPoint_(NSPoint::new(20., 20.));
+            window.center();
+
+            let title = NSString::alloc().initWithUTF8String(CString::new("Hello World!").unwrap().as_ptr());        
+            window.setTitle_(title);
+            window.makeKeyAndOrderFront_(nil);
+
+            let current_app = NSRunningApplication::currentApplication();
+            current_app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps);
+
+            app.run();
+        }
 	}
 }
